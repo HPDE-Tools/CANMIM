@@ -133,7 +133,7 @@ void ADS1115ADCTask(void *pvParameter)
                 adc_raw[i] = (uint16_t)result;
                 ads1115_channel_sum[i] = 0;
                 ads1115_channel_cv_count[i] = 0;
-                boardContext->adc_conversion_functions[i](&adc_converted[i], adc_raw[i]);
+                boardContext->adc_conversion_functions[i]->Convert(&adc_converted[i], adc_raw[i]);
                 boardContext->adc_volt[i] = adc_raw[i];
             }
             boardContext->SendADCwithConversion16bit(0, adc_converted[0], adc_raw[0], adc_converted[1], adc_raw[1]);

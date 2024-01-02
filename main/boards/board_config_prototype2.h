@@ -28,11 +28,11 @@ public:
         config->i2c0_sda = 3;
         config->i2c0_scl = 15;
         config->analog_pw = 8;
-        config->sw0 = 19;
-        config->sw1 = 1;
-        config->sw2 = 4;
-        config->sw3 = 5;
-        config->sw4 = 0;
+        config->sw0 = 19;    // CAN OUT disable SW. OFF: CAN IN -> CAN OUT, ADC-> CAN OUT. ON: ADC-> CAN OUT
+        config->sw1 = 1;     // ON: ADC CAN base ID offset +0x1000
+        config->sw2 = 4;     // ON: ADC 4-7 shutoff to boost sample rate
+        config->sw3 = 5;     // ON: Allow config from BLE/USB
+        config->sw4 = 0;     // ON: Power Save when idle.
         config->btn_boot = 9;
     }
 

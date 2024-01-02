@@ -13,13 +13,21 @@
 #include "adc/ads1115.h"
 #include "adc/adc_raw_conversion.h"
 
-#include "can_types.h"
-#include "board_config.h"
-#include "context.h"
+#include "context/can_types.h"
+#include "context/context.h"
+#include "conversion/conversion.h"
+#include "boards/board_config.h"
 #include "tasks/tasks.h"
-#include "ble.h"
+#include "ble/ble.h"
+#include "console/console.h"
 
 hpde_tools::BoardContext *boardContext;
+
+hpde_tools::NO_Conversion gDefaultConversion;
+hpde_tools::PressureSensor_Conversion g150PSISensorConversion(1500);
+hpde_tools::PressureSensor_Conversion g10BarSensorConversion(1450);
+hpde_tools::PT385TempSensor_Conversion gOilTempSensorConversion(100.0);
+hpde_tools::EthanolSensor_Conversion gEthanolSensorConversion;
 
 void fatal_error()
 {
@@ -36,9 +44,8 @@ void fatal_error()
 char timer_buf[256];
 static void tick_timer_cb(void *arg)
 {
-
-    // size_t can_in_count;
-    // size_t can_out_count;
+    if (!boardContext->debug)
+        return;
     size_t ble_out_count = boardContext->ble_out_count;
     boardContext->ble_out_count = 0;
     size_t ble_notified_count = boardContext->ble_notified_count;
@@ -48,23 +55,18 @@ static void tick_timer_cb(void *arg)
     {
         adc_int_count[i] = boardContext->adc_int_count[i];
         boardContext->adc_int_count[i] = 0;
-        ESP_LOGI("TIMER", "adc%d_intr_count: %u", i, adc_int_count[i]);
+        printf("TIMER: adc%d_intr_count: %u\n", i, adc_int_count[i]);
     }
-
-    // ESP_LOGI("TIMER", "can_in_count: %zu", can_in_count);
-    ESP_LOGI("TIMER", "can_out_count: %zu", (size_t)boardContext->can_out_count);
+    printf("TIMER: can_out_count: %zu; ble_out_count: %zu; ble_notified_count: %zu;\n", (size_t)boardContext->can_out_count, ble_out_count, ble_notified_count);
     boardContext->can_out_count = 0;
-    ESP_LOGI("TIMER", "ble_out_count: %zu", ble_out_count);
-    ESP_LOGI("TIMER", "ble_notified_count: %zu", ble_notified_count);
     size_t offset = 0;
     for (size_t i = 0; i < sizeof(boardContext->adc_volt) / sizeof(uint16_t); i++)
     {
         offset += sprintf(timer_buf + offset, " CH%u: %f V ", i, static_cast<float>(boardContext->adc_volt[i]) / 10000);
     }
     timer_buf[offset] = '\0';
-    ESP_LOGI("TIMER", "%s", timer_buf);
-    ESP_LOGI("TIMER", "spitime %d us", (int)boardContext->spi_time);
-    ESP_LOGI("TIMER", "");
+    printf("TIMER: %s\n", timer_buf);
+    printf("TIMER: spitime %d us\n\n", (int)boardContext->spi_time);
 }
 
 void gpio_init();
@@ -116,11 +118,16 @@ void set_ble_name_from_mac(char *base_name)
 
 extern "C" void app_main(void)
 {
-    ESP_LOGI("MAIN", "app_main");
     hpde_tools::board_pin_config_t pin_config;
     boardConfig.set_pin_definition(&pin_config);
-    ESP_LOGI("MAIN", "before boardContext Init");
     boardContext = new hpde_tools::BoardContext(pin_config);
+#ifdef CONFIG_CM_ENABLE_DEBUG_PRINT
+    boardContext->debug = true;
+    esp_log_set_level_master(ESP_LOG_INFO);
+#else
+    boardContext->debug = false;
+    esp_log_set_level_master(ESP_LOG_ERROR);
+#endif
     // Init NVS, which is used by WiFi and BLE stack.
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
@@ -131,8 +138,13 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(ret);
     set_ble_name_from_mac(boardConfig.get_ble_name());
     for (int i = 0; i < 8; i++)
-        boardContext->adc_conversion_functions[i] = hpde_tools::ADCConversion150OilSensor;
-    boardContext->SetBaseCANID(0x662);
+        boardContext->adc_conversion_functions[i] = &gDefaultConversion;
+    boardContext->adc_conversion_functions[0] = &g150PSISensorConversion;
+    boardContext->adc_conversion_functions[1] = &g150PSISensorConversion;
+    boardContext->adc_conversion_functions[2] = &g150PSISensorConversion;
+    boardContext->adc_conversion_functions[3] = &g150PSISensorConversion;
+
+    boardContext->SetBaseCANID(CONFIG_CM_CAN_BASE_ID);
     ESP_LOGI("MAIN", "boardContext Init");
     gpio_init();
     print_mcu_info();
@@ -151,7 +163,6 @@ extern "C" void app_main(void)
     esp_timer_handle_t tick_timer = NULL;
     ESP_ERROR_CHECK(esp_timer_create(&tick_timer_args, &tick_timer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(tick_timer, 1000000));
-
     ESP_LOGI("MAIN", "Timer Event Started");
 
     boardContext->ble_out_queue = xQueueCreate(50, sizeof(ble_can_frame_t));
@@ -165,6 +176,8 @@ extern "C" void app_main(void)
     xTaskCreate(hpde_tools::BLETask, "bleTask", 4096, boardContext, 2, NULL);
     xTaskCreate(hpde_tools::LEDTask, "ledTask", 4096, boardContext, tskIDLE_PRIORITY, NULL);
     boardContext->SetLEDStatus(hpde_tools::BoardContext::LED_NORMAL_ON);
+    hpde_tools::ConfigConsole console(boardContext);
+    console.StartUSBUARTConsole();
 }
 
 static void SetUpSingleGPIOINTR(int pin_num, int intr_num)

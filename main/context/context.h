@@ -9,6 +9,7 @@
 #include <functional>
 
 #include "board_pin_config.h"
+#include "conversion/conversion.h"
 
 namespace hpde_tools
 {
@@ -45,6 +46,7 @@ public:
     volatile uint32_t ble_out_count = 0;
     volatile uint32_t ble_notified_count = 0;
     volatile uint32_t can_out_count = 0;
+    volatile bool debug;
 
 public:
     QueueHandle_t ble_out_queue;
@@ -53,7 +55,8 @@ public:
     twai_handle_t can_bus_out;
     const board_pin_config_t pin_config;
     const uint16_t vref = 50000;
-    std::function<void(uint16_t *, uint16_t)> adc_conversion_functions[8];
+    //std::function<void(uint16_t *, uint16_t)> adc_conversion_functions[8];
+    ADC_Conversion* adc_conversion_functions[8];
 
 private:
     uint32_t base_can_id;

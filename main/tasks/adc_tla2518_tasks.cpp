@@ -51,7 +51,7 @@ static void initADC(BoardContext *boardContext)
     s_bus_config.data7_io_num = -1;
     spi_device_interface_config_t s_dev_config;
     memset(&s_dev_config, 0, sizeof(spi_device_interface_config_t));
-    s_dev_config.clock_speed_hz = 8 * 1000 * 1000; // 8Mhz SPI
+    s_dev_config.clock_speed_hz = 16 * 1000 * 1000; // 16Mhz SPI
     s_dev_config.mode = 0;
     s_dev_config.spics_io_num = boardContext->pin_config.spi0_cs0;
     s_dev_config.queue_size = 24;
@@ -178,7 +178,7 @@ void ADCTLA2518Task(void *pvParameter)
                     adc_raw[i] = adc_channel_sum[i] / adc_channel_cv_count;
                     adc_volt[i] = static_cast<uint64_t>(boardContext->vref) * adc_raw[i] / 65536;
                     boardContext->adc_volt[i] = adc_volt[i];
-                    boardContext->adc_conversion_functions[i](&adc_converted[i], adc_volt[i]);
+                    boardContext->adc_conversion_functions[i]->Convert(&adc_converted[i], adc_volt[i]);
                 }
                 for (size_t i = 0; i < 4; i++)
                 {

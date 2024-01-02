@@ -1,0 +1,29 @@
+menu "CANMIM Configs"
+config CM_ENABLE_DEBUG_PRINT
+    bool "Enable debug outputs"
+    default n
+    help
+        Enable debug output will increase interrupt latency.
+
+choice CM_BOARD
+    prompt "Board type"
+    default CM_BOARD_V5
+    help
+        This option sets the board type.
+
+    config CM_BOARD_V4
+        bool "V4 production board with ESP32C3 Single CAN and internal ADC"
+    config CM_BOARD_V5
+        bool "V5 production board with ESP32C6 Dual CAN and 12bit 8ch TLA2518 ADC"
+    config CM_BOARD_V5_PROTO
+        bool "V5 prototype board with ESP32C6 Dual CAN and 4x 16bit ADS1115 ADC"
+
+endchoice
+
+config CM_CAN_BASE_ID
+    hex "Base CAN ID for ADC output"
+    default 0x662
+    help
+        Set the default base CAN ID for ADC output.
+
+endmenu
