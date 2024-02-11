@@ -73,6 +73,12 @@ public:
     void SendADCwithConversion16bit(uint32_t channel_offset, uint16_t channel_a_converted, uint16_t channel_a_raw, uint16_t channel_b_converted, uint16_t channel_b_raw);
     void SendADCRAW16bit(uint32_t channel_offset, uint16_t channel_a_raw, uint16_t channel_b_raw, uint16_t channel_c_raw, uint16_t channel_d_raw);
     void SetLEDStatus(uint8_t status);
+
+    inline bool IsCANIDColliding(uint32_t can_id) {
+        if (can_id >= this->base_can_id && can_id <= this->base_can_id + 4)
+            return true;
+        return false;
+    }
 };
 
 }

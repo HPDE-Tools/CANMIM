@@ -20,7 +20,9 @@ void CANInTask(void *pvParameter)
         switch (ret_code)
         {
         case ESP_OK:
-            if (!(message.rtr))
+            if (boardContext->IsCANIDColliding(message.identifier))
+                break;    
+            else if (!(message.rtr))
             {
                 ble_can_frame_t ble_can_frame;
                 ConvertTWAItoBLECAN(&message, &ble_can_frame, esp_timer_get_time() / 1000);

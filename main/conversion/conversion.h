@@ -61,7 +61,7 @@ public:
             huv = 5000;
         if (huv < 5000)
             huv = 5000;
-        *converted = (huv - 5000)/400;
+        *converted = static_cast<uint16_t>(static_cast<uint32_t>(huv - 5000)*255/40000);
     }
 };
 }
